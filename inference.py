@@ -29,7 +29,7 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
     print("Starting inference...")
 
     # --- 1. Warm-up Phase --- 
-    print("Warming up model hidden state...")
+    #print("Warming up model hidden state...")
     warmup_encoded = mu_law_encode(warmup_sequence, quantization_channels=256)
     warmup_input_audio = (warmup_encoded.float() / 255.0).to(device)
 
