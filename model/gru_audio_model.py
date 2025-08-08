@@ -38,6 +38,14 @@ class RNN(nn.Module):
                           dropout=config.dropout if config.num_layers > 1 else 0.0)
         self.decoder = nn.Linear(self.hidden_size, self.output_size)
 
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        for name, param in self.named_parameters():
+            if "weight" in name:
+                nn.init.xavier_uniform_(param)
+            elif "bias" in name:
+                nn.init.constant_(param, 0.0)
  
     # input and cv are each one sequence element 
     def forward(self, input, hidden, batch_size=1):
