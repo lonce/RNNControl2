@@ -5,14 +5,15 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python>=3.12
   - numpy
   - matplotlib
   - jupyterlab
   - ipykernel
   - tensorboard
-  - soundfile       # pulls libsndfile
   - pytorch
   - torchvision
   - torchaudio
-  # (no cpuonly / no pytorch-cuda here → CPU by default, GPU optional)
+  - pip
+  - pip:
+    - soundfile
