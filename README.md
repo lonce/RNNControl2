@@ -36,7 +36,7 @@ On machines with a compatible NVIDIA driver, install CUDA support with one comma
 conda install -n basicaudio -c nvidia pytorch-cuda=xx.x
 ```
 
-Install the small test dataset [nsynth.64.76_sm](https://drive.google.com/file/d/1zzXccguczXJIDh8vxoXvt1xGmKlGn_f6/view?usp=sharing) into the /data folder.   
+Install the small test dataset [nsynth.64.76_sm](https://drive.google.com/file/d/1zzXccguczXJIDh8vxoXvt1xGmKlGn_f6/view?usp=sharing) into the /data folder.  (Check to make sure the wav files are are ./data/nsynth.64.76_sm and not in a nested directory).
 
 Open  jupyter lab,   
 
