@@ -18,6 +18,7 @@ class AudioDatasetConfig:
     add_noise: bool = False                        # Whether to add white noise
     noise_weight: float = 0.1                      # Weight for uniform noise injection
     encode: bool = False                           # False - float[-1,1], True - [0,1] compressed mulaw
+    numtokens: int = 256
     
 ####################################################################################################################
 class MuLawAudioDataset2(Dataset):
@@ -64,17 +65,21 @@ class MuLawAudioDataset2(Dataset):
         end_pos = start_pos + self.sequence_length + 1
         chunk = waveform[start_pos:end_pos]
 
+        # Target is created from the original, clean audio signal
+        target_seq = mu_law_encode(chunk[1:], quantization_channels=self.config.numtokens).long()
+
+        # Input sequence is prepared separately
+        input_chunk = chunk[:-1]
+
         if self.config.add_noise:
-            chunk = self._add_noise(chunk, self.config.noise_weight)
+            input_chunk = self._add_noise(input_chunk, self.config.noise_weight)
 
-        encoded = mu_law_encode(chunk, quantization_channels=256)
-        
         if self.config.encode:
-            input_seq = encoded[:-1].float() / 255.0
+            encoded_input = mu_law_encode(input_chunk, quantization_channels=self.config.numtokens)
+            input_seq = encoded_input.float() / (self.config.numtokens-1.0)
         else:
-            input_seq=chunk
-        target_seq = encoded[1:].long()
-
+            input_seq = input_chunk
+        
         cond_params = norm_params.unsqueeze(0).expand(input_seq.shape[0], -1)
         
         # Combine audio and conditioning parameters into a single input tensor
@@ -121,28 +126,28 @@ class MuLawAudioDataset2(Dataset):
         return chunk
 ##############################################################################################
  
-def generate_noisy_sine_warmup(steps: int, sample_rate: int = 16000, amplitude: float = 0.9, freq: float = 440.0, noise_level: float = 0.05) -> torch.Tensor:
-    """
-    Generate a noisy 440Hz sine wave, mu-law encode it, and return tokens.
+# def generate_noisy_sine_warmup(steps: int, sample_rate: int = 16000, amplitude: float = 0.9, freq: float = 440.0, noise_level: float = 0.05, numtokens=256) -> torch.Tensor:
+#     """
+#     Generate a noisy 440Hz sine wave, mu-law encode it, and return tokens.
 
-    Args:
-        steps (int): Number of time steps to generate.
-        sample_rate (int): Sample rate in Hz.
-        amplitude (float): Peak amplitude of the sine wave, in [0,1].
-        freq (float): Frequency of sine wave in Hz.
-        noise_level (float): Std dev of white noise to add (0.0 for pure tone).
+#     Args:
+#         steps (int): Number of time steps to generate.
+#         sample_rate (int): Sample rate in Hz.
+#         amplitude (float): Peak amplitude of the sine wave, in [0,1].
+#         freq (float): Frequency of sine wave in Hz.
+#         noise_level (float): Std dev of white noise to add (0.0 for pure tone).
 
-    Returns:
-        torch.Tensor: Mu-law encoded token sequence, shape [steps], dtype uint8.
-    """
-    duration_sec = steps / sample_rate
-    t = np.linspace(0, duration_sec, steps, endpoint=False)
-    sine_wave = amplitude * np.sin(2 * np.pi * freq * t)
-    noisy_wave = sine_wave + np.random.normal(0, noise_level, sine_wave.shape)
-    noisy_wave = np.clip(noisy_wave, -1.0, 1.0)
-    waveform = torch.tensor(noisy_wave, dtype=torch.float32)
+#     Returns:
+#         torch.Tensor: Mu-law encoded token sequence, shape [steps], dtype uint8.
+#     """
+#     duration_sec = steps / sample_rate
+#     t = np.linspace(0, duration_sec, steps, endpoint=False)
+#     sine_wave = amplitude * np.sin(2 * np.pi * freq * t)
+#     noisy_wave = sine_wave + np.random.normal(0, noise_level, sine_wave.shape)
+#     noisy_wave = np.clip(noisy_wave, -1.0, 1.0)
+#     waveform = torch.tensor(noisy_wave, dtype=torch.float32)
 
-    encoded = mu_law_encode(waveform.unsqueeze(0), quantization_channels=256).squeeze(0)
-    return encoded
+#     encoded = mu_law_encode(waveform.unsqueeze(0), quantization_channels=numtokens).squeeze(0)
+#    return encoded
 
         

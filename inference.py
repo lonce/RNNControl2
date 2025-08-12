@@ -25,13 +25,14 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
     Returns:
         np.array: The generated audio waveform.
     """
+    numtokens=model.numtokens
     device = next(model.parameters()).device
-    print("Starting inference...")
+    print(f"Starting inference... with numtokens={numtokens}")
 
     # --- 1. Warm-up Phase --- 
     #print("Warming up model hidden state...")
-    warmup_encoded = mu_law_encode(warmup_sequence, quantization_channels=256)
-    warmup_input_audio = (warmup_encoded.float() / 255.0).to(device)
+    warmup_encoded = mu_law_encode(warmup_sequence, quantization_channels=numtokens)
+    warmup_input_audio = (warmup_encoded.float() / (numtokens-1.0)).to(device)
 
     first_cond_vec = cond_seq[0].unsqueeze(0).repeat(len(warmup_input_audio), 1).to(device)
     warmup_full_input = torch.cat([warmup_input_audio.unsqueeze(-1), first_cond_vec], dim=-1)
@@ -43,7 +44,7 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
     next_input_audio = warmup_input_audio[-1].unsqueeze(0)
 
     # --- 2. Generation Phase --- 
-    print(f"Generating {len(cond_seq)} audio samples...")
+    print(f"Generating {len(cond_seq)} audio samples... using numtokens={numtokens}")
     generated_samples = []
     with torch.no_grad():
         for i in range(len(cond_seq)):
@@ -58,10 +59,10 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
             sampled_relative_idx = torch.multinomial(top_n_probs, 1).squeeze()
             sampled_mu_law_index = top_n_indices[sampled_relative_idx]
 
-            new_audio_sample = mu_law_decode(sampled_mu_law_index, quantization_channels=256)
+            new_audio_sample = mu_law_decode(sampled_mu_law_index, quantization_channels=numtokens)
             generated_samples.append(new_audio_sample.item())
 
-            next_input_audio = (mu_law_encode(new_audio_sample.unsqueeze(0), 256).float() / 255.0).to(device)
+            next_input_audio = (mu_law_encode(new_audio_sample.unsqueeze(0), numtokens).float() / (numtokens-1.0)).to(device)
 
     print("Inference complete.")
     return np.array(generated_samples)

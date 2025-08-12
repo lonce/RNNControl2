@@ -7,21 +7,21 @@ import torchaudio
 USETORCHAUDO=False
 
 if USETORCHAUDO :
-    def mu_law_encode(audio_float, quantization_channels=256) :
+    def mu_law_encode(audio_float, quantization_channels) :
         if isinstance(audio_float, np.ndarray):
-            return torchaudio.functional.mu_law_encoding(torch.from_numpy(audio_float), quantization_channels=256).numpy()
+            return torchaudio.functional.mu_law_encoding(torch.from_numpy(audio_float), quantization_channels=quantization_channels).numpy()
         else:
-            return torchaudio.functional.mu_law_encoding(audio_float, quantization_channels=256)
+            return torchaudio.functional.mu_law_encoding(audio_float, quantization_channels=quantization_channels)
 
-    def  mu_law_decode(audio_mulaw, quantization_channels=256):
+    def  mu_law_decode(audio_mulaw, quantization_channels):
         if isinstance(audio_mulaw, np.ndarray):
-            return torchaudio.functional.mu_law_decoding(torch.from_numpy(audio_mulaw), quantization_channels=256).numpy()
+            return torchaudio.functional.mu_law_decoding(torch.from_numpy(audio_mulaw), quantization_channels=quantization_channels).numpy()
         else : 
-            return torchaudio.functional.mu_law_decoding(audio_mulaw, quantization_channels=256)
+            return torchaudio.functional.mu_law_decoding(audio_mulaw, quantization_channels=quantization_channels)
 
 else : 
 
-    def mu_law_encode(audio, quantization_channels=256):
+    def mu_law_encode(audio, quantization_channels):
         """
         Encode waveform using mu-law companding and map to integer indices in [0, quantization_channels - 1].
     
@@ -51,7 +51,7 @@ else :
     
     
         
-    def mu_law_decode(encoded, quantization_channels=256):
+    def mu_law_decode(encoded, quantization_channels):
         """
         Decode integer mu-law encoded values in [0, quantization_channels - 1] back to waveform in [-1, 1].
     

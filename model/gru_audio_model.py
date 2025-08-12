@@ -17,7 +17,7 @@ class GRUAudioConfig:
     cond_size: int = 3
     hidden_size: int = 48
     num_layers: int = 4
-    output_size: int = 256
+    numtokens: int = 256
     dropout: float = 0.1
 
 
@@ -30,13 +30,13 @@ class RNN(nn.Module):
         self.input_size = config.input_size
         self.cond_size = config.cond_size
         self.hidden_size = config.hidden_size
-        self.output_size = config.output_size
+        self.numtokens = config.numtokens
         self.num_layers = config.num_layers #no. of stacked GRU layers
         
         self.i2h = nn.Linear(self.input_size+self.cond_size, self.hidden_size)
         self.gru = nn.GRU(self.hidden_size, self.hidden_size, self.num_layers, batch_first=True, 
                           dropout=config.dropout if config.num_layers > 1 else 0.0)
-        self.decoder = nn.Linear(self.hidden_size, self.output_size)
+        self.decoder = nn.Linear(self.hidden_size, self.numtokens)
 
         self._initialize_weights()
 

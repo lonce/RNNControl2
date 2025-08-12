@@ -9,15 +9,15 @@ USETORCHAUDO=False
 if USETORCHAUDO :
     def mu_law_encode(audio_float, quantization_channels=256) :
         if isinstance(audio_float, np.ndarray):
-            return torchaudio.functional.mu_law_encoding(torch.from_numpy(audio_float), quantization_channels=256).numpy()
+            return torchaudio.functional.mu_law_encoding(torch.from_numpy(audio_float), quantization_channels=quantization_channels).numpy()
         else:
-            return torchaudio.functional.mu_law_encoding(audio_float, quantization_channels=256)
+            return torchaudio.functional.mu_law_encoding(audio_float, quantization_channels=quantization_channels)
 
     def  mu_law_decode(audio_mulaw, quantization_channels=256):
         if isinstance(audio_mulaw, np.ndarray):
-            return torchaudio.functional.mu_law_decoding(torch.from_numpy(audio_mulaw), quantization_channels=256).numpy()
+            return torchaudio.functional.mu_law_decoding(torch.from_numpy(audio_mulaw), quantization_channels=quantization_channels).numpy()
         else : 
-            return torchaudio.functional.mu_law_decoding(audio_mulaw, quantization_channels=256)
+            return torchaudio.functional.mu_law_decoding(audio_mulaw, quantization_channels=quantization_channels)
 
 else : 
 
