@@ -124,30 +124,6 @@ class MuLawAudioDataset2(Dataset):
         
         chunk = waveform[start_pos:end_pos]
         return chunk
-##############################################################################################
- 
-# def generate_noisy_sine_warmup(steps: int, sample_rate: int = 16000, amplitude: float = 0.9, freq: float = 440.0, noise_level: float = 0.05, numtokens=256) -> torch.Tensor:
-#     """
-#     Generate a noisy 440Hz sine wave, mu-law encode it, and return tokens.
 
-#     Args:
-#         steps (int): Number of time steps to generate.
-#         sample_rate (int): Sample rate in Hz.
-#         amplitude (float): Peak amplitude of the sine wave, in [0,1].
-#         freq (float): Frequency of sine wave in Hz.
-#         noise_level (float): Std dev of white noise to add (0.0 for pure tone).
-
-#     Returns:
-#         torch.Tensor: Mu-law encoded token sequence, shape [steps], dtype uint8.
-#     """
-#     duration_sec = steps / sample_rate
-#     t = np.linspace(0, duration_sec, steps, endpoint=False)
-#     sine_wave = amplitude * np.sin(2 * np.pi * freq * t)
-#     noisy_wave = sine_wave + np.random.normal(0, noise_level, sine_wave.shape)
-#     noisy_wave = np.clip(noisy_wave, -1.0, 1.0)
-#     waveform = torch.tensor(noisy_wave, dtype=torch.float32)
-
-#     encoded = mu_law_encode(waveform.unsqueeze(0), quantization_channels=numtokens).squeeze(0)
-#    return encoded
 
         
