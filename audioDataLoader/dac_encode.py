@@ -37,7 +37,9 @@ def encode_dataset(data: str, destination_dir: str):
             x = encode_audio(signal, model)
             x.save(os.path.join(destination_dir, f'{file.strip(".wav")}.dac'))
 
-encode_dataset('data/nsynth.64.76_sm', 'data/dac_encoded_audio')
+
+if __name__ == "__main__":
+    encode_dataset('data/nsynth.64.76_sm', 'data/dac_encoded_audio')
     
 
 

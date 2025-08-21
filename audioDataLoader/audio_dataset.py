@@ -4,7 +4,7 @@ import torch
 import torchaudio
 import numpy as np
 from torch.utils.data import Dataset
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Tuple, List
 import random
 from .mulaw import mu_law_encode, mu_law_decode
@@ -12,12 +12,12 @@ from .mulaw import mu_law_encode, mu_law_decode
 
 @dataclass
 class AudioDatasetConfig:
-    data_dir: str                                  # Path to directory with .wav files
-    sequence_length: int                           # Number of samples per training sequence
-    parameter_specs: Dict[str, Tuple[float, float]]  # {'param': (min, max), ...}
+    data_dir: str = 'data/nsynth.64.76_sm'                                 # Path to directory with .wav files
+    sequence_length: int = 256                           # Number of samples per training sequence
+    parameter_specs: Dict[str, Tuple[float, float]] = field(default_factory=lambda: {"instID": (1, 2), "a": (0,1), "p": (64.0, 76.0)})  # {'param': (min, max), ...}
     add_noise: bool = False                        # Whether to add white noise
     noise_weight: float = 0.1                      # Weight for uniform noise injection
-    encode: bool = False                           # False - float[-1,1], True - [0,1] compressed mulaw
+    encode: bool = True                          # False - float[-1,1], True - [0,1] compressed mulaw
     numtokens: int = 256
     
 ####################################################################################################################
@@ -150,4 +150,7 @@ class MuLawAudioDataset2(Dataset):
 #     encoded = mu_law_encode(waveform.unsqueeze(0), quantization_channels=numtokens).squeeze(0)
 #    return encoded
 
-        
+if __name__ == "__main__":
+    config = AudioDatasetConfig()
+    dataset = MuLawAudioDataset2(config)
+    print(dataset[7])
