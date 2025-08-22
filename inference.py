@@ -57,7 +57,25 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
             top_n_logits, top_n_indices = torch.topk(logits, top_n)
             top_n_probs = F.softmax(top_n_logits, dim=-1)
             sampled_relative_idx = torch.multinomial(top_n_probs, 1).squeeze()
-            sampled_mu_law_index = top_n_indices[sampled_relative_idx]
+
+            #manage possible NaN with some debugging statement
+            try: 
+                sampled_mu_law_index = top_n_indices[sampled_relative_idx]
+            except Exception as e:
+                print(f"Sampling error: {e}")
+                
+                #and more detailed info: 
+                print(f"top_n_logits stats: min={top_n_logits.min()}, max={top_n_logits.max()}, has_nan={torch.isnan(top_n_logits).any()}")
+                print(f"top_n_probs stats: min={top_n_probs.min()}, max={top_n_probs.max()}, has_nan={torch.isnan(top_n_probs).any()}")
+                print(f"sampled_relative_idx: {sampled_relative_idx}, type: {type(sampled_relative_idx)}")
+                print(f"top_n_indices shape: {top_n_indices.shape}, sampled_relative_idx shape: {sampled_relative_idx.shape}")
+
+
+
+
+
+            
+            
 
             new_audio_sample = mu_law_decode(sampled_mu_law_index, quantization_channels=numtokens)
             generated_samples.append(new_audio_sample.item())
