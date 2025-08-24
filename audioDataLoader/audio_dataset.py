@@ -21,7 +21,7 @@ class AudioDatasetConfig:
     add_noise: bool = False                        # Whether to add white noise
     noise_weight: float = 0.1                      # Weight for uniform noise injection
     encode: bool = False                           # False - float[-1,1], True - [0,1] compressed mulaw
-    numtokens: int = 256
+    codebook_size: int = 256
     
 ####################################################################################################################
 class MuLawAudioDataset2(Dataset):
@@ -42,8 +42,6 @@ class MuLawAudioDataset2(Dataset):
                     waveform = waveform.mean(dim=0) # Mono
 
                 waveform = waveform.squeeze(0)
-
-                
 
                 waveform = torch.clamp(waveform, -1.0, 1.0)
 
@@ -69,7 +67,7 @@ class MuLawAudioDataset2(Dataset):
         chunk = waveform[start_pos:end_pos]
 
         # Target is created from the original, clean audio signal
-        target_seq = mu_law_encode(chunk[1:], quantization_channels=self.config.numtokens).long()
+        target_seq = mu_law_encode(chunk[1:], quantization_channels=self.config.codebook_size).long()
 
         # Input sequence is prepared separately
         input_chunk = chunk[:-1]
@@ -78,8 +76,8 @@ class MuLawAudioDataset2(Dataset):
             input_chunk = self._add_noise(input_chunk, self.config.noise_weight)
 
         if self.config.encode:
-            encoded_input = mu_law_encode(input_chunk, quantization_channels=self.config.numtokens)
-            input_seq = encoded_input.float() / (self.config.numtokens-1.0)
+            encoded_input = mu_law_encode(input_chunk, quantization_channels=self.config.codebook_size)
+            input_seq = encoded_input.float() / (self.config.codebook_size-1.0)
         else:
             input_seq = input_chunk
         
@@ -88,7 +86,9 @@ class MuLawAudioDataset2(Dataset):
         # Combine audio and conditioning parameters into a single input tensor
         input_tensor = torch.cat([input_seq.unsqueeze(-1), cond_params], dim=-1)
         
-        return input_tensor, target_seq.unsqueeze(-1)
+        # CHANGE: Add extra dimension for n_q compatibility
+        # Shape changes from (seq_len,) to (seq_len, 1)
+        return input_tensor, target_seq.unsqueeze(-1).unsqueeze(-1)
 
     def _add_noise(self, sample, weight):
         noise = torch.from_numpy(np.random.uniform(sample.min(), sample.max(), size=len(sample))).float()
@@ -142,7 +142,7 @@ class MuLawAudioDatasetFromManifest(Dataset):
       - Column 'filename' listing the wav file name (not path).
       - One column per parameter present in config.parameter_specs.
 
-    Other config fields (data_dir, sequence_length, encode, numtokens, add_noise, etc.)
+    Other config fields (data_dir, sequence_length, encode, codebook_size, add_noise, etc.)
     are used exactly as in your existing dataset.
     """
 
@@ -242,7 +242,7 @@ class MuLawAudioDatasetFromManifest(Dataset):
 
         # Target (from clean original), mu-law encoded to int class labels
         target_seq = mu_law_encode(
-            chunk[1:], quantization_channels=self.config.numtokens
+            chunk[1:], quantization_channels=self.config.codebook_size
         ).long()
 
         # Input (optionally noisy), optionally mu-law-encoded and scaled to [0,1]
@@ -252,9 +252,9 @@ class MuLawAudioDatasetFromManifest(Dataset):
 
         if getattr(self.config, "encode", True):
             encoded_input = mu_law_encode(
-                input_chunk, quantization_channels=self.config.numtokens
+                input_chunk, quantization_channels=self.config.codebook_size
             )
-            input_seq = encoded_input.float() / (self.config.numtokens - 1.0)
+            input_seq = encoded_input.float() / (self.config.codebook_size - 1.0)
         else:
             input_seq = input_chunk
 
@@ -262,8 +262,9 @@ class MuLawAudioDatasetFromManifest(Dataset):
         cond_params = norm_params.unsqueeze(0).expand(input_seq.shape[0], -1)
         input_tensor = torch.cat([input_seq.unsqueeze(-1), cond_params], dim=-1)
 
-        # Return exactly like MuLawAudioDataset2: (inputs, targets)
-        return input_tensor, target_seq.unsqueeze(-1)
+        # CHANGE: Add extra dimension for n_q compatibility  
+        # Shape changes from (seq_len,) to (seq_len, 1)
+        return input_tensor, target_seq.unsqueeze(-1).unsqueeze(-1)
 
     # ---------- Helpers ----------
 
@@ -303,6 +304,3 @@ class MuLawAudioDatasetFromManifest(Dataset):
         waveform, pvect = self.data[file_idx]
         end_pos = start_pos + self.sequence_length + 1
         return waveform[start_pos:end_pos], pvect
-
-    
-        

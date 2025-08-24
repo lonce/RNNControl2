@@ -8,7 +8,7 @@ import argparse
 import soundfile as sf
 
 # Local imports from your project structure
-from model.gru_audio_model import RNN, GRUAudioConfig
+from model.gru_audio_model import RNN, GRUModelConfig
 from audioDataLoader.mulaw import mu_law_encode, mu_law_decode
 
 def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
@@ -25,14 +25,14 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
     Returns:
         np.array: The generated audio waveform.
     """
-    numtokens=model.numtokens
+    codebook_size=model.codebook_size
     device = next(model.parameters()).device
-    print(f"Starting inference... with numtokens={numtokens}")
+    print(f"Starting inference... with codebook_size={codebook_size}")
 
     # --- 1. Warm-up Phase --- 
     #print("Warming up model hidden state...")
-    warmup_encoded = mu_law_encode(warmup_sequence, quantization_channels=numtokens)
-    warmup_input_audio = (warmup_encoded.float() / (numtokens-1.0)).to(device)
+    warmup_encoded = mu_law_encode(warmup_sequence, quantization_channels=codebook_size)
+    warmup_input_audio = (warmup_encoded.float() / (codebook_size-1.0)).to(device)
 
     first_cond_vec = cond_seq[0].unsqueeze(0).repeat(len(warmup_input_audio), 1).to(device)
     warmup_full_input = torch.cat([warmup_input_audio.unsqueeze(-1), first_cond_vec], dim=-1)
@@ -44,7 +44,7 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
     next_input_audio = warmup_input_audio[-1].unsqueeze(0)
 
     # --- 2. Generation Phase --- 
-    print(f"Generating {len(cond_seq)} audio samples... using numtokens={numtokens}")
+    print(f"Generating {len(cond_seq)} audio samples... using codebook_size={codebook_size}")
     generated_samples = []
     with torch.no_grad():
         for i in range(len(cond_seq)):
@@ -53,34 +53,30 @@ def run_inference(model, cond_seq, warmup_sequence, top_n=3, temperature=1.0):
 
             logits, hidden = model(next_input_full, hidden, batch_size=1)
 
-            logits = logits.div(temperature).squeeze()
-            top_n_logits, top_n_indices = torch.topk(logits, top_n)
-            top_n_probs = F.softmax(top_n_logits, dim=-1)
-            sampled_relative_idx = torch.multinomial(top_n_probs, 1).squeeze()
-
-            #manage possible NaN with some debugging statement
-            try: 
-                sampled_mu_law_index = top_n_indices[sampled_relative_idx]
-            except Exception as e:
-                print(f"Sampling error: {e}")
-                
-                #and more detailed info: 
-                print(f"top_n_logits stats: min={top_n_logits.min()}, max={top_n_logits.max()}, has_nan={torch.isnan(top_n_logits).any()}")
-                print(f"top_n_probs stats: min={top_n_probs.min()}, max={top_n_probs.max()}, has_nan={torch.isnan(top_n_probs).any()}")
-                print(f"sampled_relative_idx: {sampled_relative_idx}, type: {type(sampled_relative_idx)}")
-                print(f"top_n_indices shape: {top_n_indices.shape}, sampled_relative_idx shape: {sampled_relative_idx.shape}")
-
-
-
-
+            for j in range(model.n_q): #actually always 1 for the mulaw audio
+                logits[j] = logits[j].div(temperature).squeeze()
+                top_n_logits, top_n_indices = torch.topk(logits[j], top_n)
+                top_n_probs = F.softmax(top_n_logits, dim=-1)
+                sampled_relative_idx = torch.multinomial(top_n_probs, 1).squeeze()
+    
+                #manage possible NaN with some debugging statement
+                try: 
+                    sampled_mu_law_index = top_n_indices[sampled_relative_idx]
+                except Exception as e:
+                    print(f"Sampling error: {e}")
+                    
+                    #and more detailed info: 
+                    print(f"top_n_logits stats: min={top_n_logits.min()}, max={top_n_logits.max()}, has_nan={torch.isnan(top_n_logits).any()}")
+                    print(f"top_n_probs stats: min={top_n_probs.min()}, max={top_n_probs.max()}, has_nan={torch.isnan(top_n_probs).any()}")
+                    print(f"sampled_relative_idx: {sampled_relative_idx}, type: {type(sampled_relative_idx)}")
+                    print(f"top_n_indices shape: {top_n_indices.shape}, sampled_relative_idx shape: {sampled_relative_idx.shape}")
 
             
-            
 
-            new_audio_sample = mu_law_decode(sampled_mu_law_index, quantization_channels=numtokens)
+            new_audio_sample = mu_law_decode(sampled_mu_law_index, quantization_channels=codebook_size)
             generated_samples.append(new_audio_sample.item())
 
-            next_input_audio = (mu_law_encode(new_audio_sample.unsqueeze(0), numtokens).float() / (numtokens-1.0)).to(device)
+            next_input_audio = (mu_law_encode(new_audio_sample.unsqueeze(0), codebook_size).float() / (codebook_size-1.0)).to(device)
 
     print("Inference complete.")
     return np.array(generated_samples)
